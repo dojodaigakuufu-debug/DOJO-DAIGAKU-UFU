@@ -23,7 +23,6 @@ URL_GRADUACAO = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ6gHkJJz3jWTzh
 @st.cache_data(ttl=60)
 def carregar_dados():
     try:
-        # 1. Carrega a aba de Frequência bruta
         df_freq = pd.read_csv(URL_FREQUENCIA)
         df_freq.columns = df_freq.columns.str.strip()
         df_freq = df_freq.dropna(subset=['Nome do Aluno', 'PIN'], how='all')
@@ -37,7 +36,6 @@ def carregar_dados():
                 .apply(lambda x: float(x) if x.replace('.', '', 1).isdigit() else 0.0)
             )
 
-        # 2. Carrega a aba de Graduação bruta e faz a fusão
         df_grad = pd.DataFrame()
         if URL_GRADUACAO.startswith("http"):
             df_grad = pd.read_csv(URL_GRADUACAO)
@@ -154,7 +152,6 @@ elif not df_alunos.empty:
     elif st.session_state["perfil"] == "Aluno":
         st.subheader(f"Olá, {st.session_state['nome_usuario']}! Oss!")
         
-        # Puxa os dados cruzados para o cabeçalho
         aluno_info = df_alunos[df_alunos['PIN'] == st.session_state['pin_usuario']].iloc[0]
         
         st.markdown("### Seu Progresso")
@@ -178,14 +175,12 @@ elif not df_alunos.empty:
         
         # --- TABELA DE HISTÓRICO DE AULAS ---
         st.markdown("### 📅 Seu Histórico Diário de Presença")
-        st.write("Acompanhe aqui o registro completo de todas as suas aulas.")
+        st.write("Acompanhe aqui o registro cronológico das suas aulas computadas.")
         
-        # Puxa a linha específica do aluno na planilha bruta de frequência para evitar bugs de colunas
         aluno_freq_bruta = df_frequencia_bruta[df_frequencia_bruta['PIN'] == st.session_state['pin_usuario']].iloc[0]
         
         if 'Frequência %' in df_frequencia_bruta.columns:
             idx_freq = df_frequencia_bruta.columns.get_loc('Frequência %')
-            # Extrai apenas as colunas de datas que vêm depois da Frequência
             colunas_datas = [col for col in df_frequencia_bruta.columns[idx_freq+1:] if col != 'Frequência Num']
             
             if len(colunas_datas) > 0:
@@ -194,26 +189,26 @@ elif not df_alunos.empty:
                 for data in colunas_datas:
                     status_aula = str(aluno_freq_bruta.get(data, "-")).strip().upper()
                     
+                    # Filtro inteligente: Pula colunas vazias, com traço ou nulas do futuro
+                    if status_aula in ['NAN', '-', '']:
+                        continue
+                        
                     if status_aula == 'P':
                         status_formatado = "✅ Presente"
                     elif status_aula == 'F':
                         status_formatado = "❌ Falta"
                     elif status_aula == 'C':
                         status_formatado = "🔵 Cancelado / Feriado"
-                    elif status_aula == 'NAN' or status_aula == '-':
-                        status_formatado = "⏳ Aguardando registro"
                     else:
                         status_formatado = status_aula
                         
                     historico_lista.append({"Data da Aula": data, "Status": status_formatado})
                 
-                # Converte para DataFrame
-                df_historico_aluno = pd.DataFrame(historico_lista)
-                
-                # Inverte a ordem para mostrar as aulas mais recentes no topo
-                df_historico_aluno = df_historico_aluno[::-1]
-                
-                # Exibe como uma tabela limpa e sem o índice numérico
-                st.dataframe(df_historico_aluno, use_container_width=True, hide_index=True)
+                # Exibe a tabela apenas se houver aulas registradas no passado
+                if len(historico_lista) > 0:
+                    df_historico_aluno = pd.DataFrame(historico_lista)
+                    st.dataframe(df_historico_aluno, use_container_width=True, hide_index=True)
+                else:
+                    st.info("Nenhuma aula foi computada para você até o momento.")
             else:
-                st.info("Nenhuma data de aula encontrada na planilha.")
+                st.info("Nenhuma coluna de datas encontrada na planilha.")
