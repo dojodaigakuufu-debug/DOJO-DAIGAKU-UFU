@@ -20,7 +20,6 @@ URL_GRADUACAO = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ6gHkJJz3jWTzh
 # ==========================================
 # 2. Processamento de Dados (Pandas)
 # ==========================================
-# Agora a função retorna as tabelas separadas e a tabela fundida
 @st.cache_data(ttl=60)
 def carregar_dados():
     try:
@@ -29,7 +28,6 @@ def carregar_dados():
         df_freq.columns = df_freq.columns.str.strip()
         df_freq = df_freq.dropna(subset=['Nome do Aluno', 'PIN'], how='all')
         
-        # Limpa e converte a Frequência para numérico
         if 'Frequência %' in df_freq.columns:
             df_freq['Frequência Num'] = (
                 df_freq['Frequência %']
@@ -57,7 +55,6 @@ def carregar_dados():
         st.error(f"Erro ao carregar a planilha. Detalhe: {e}")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
-# Extrai as 3 bases de dados para uso no aplicativo
 df_alunos, df_frequencia_bruta, df_graduacao_bruta = carregar_dados()
 
 # ==========================================
@@ -70,13 +67,10 @@ def fazer_login(credencial, senha=None):
     if df_alunos.empty:
         return False
         
-    # Login Sensei
     if "@" in credencial:
         if credencial == SENSEI_EMAIL and senha == SENSEI_SENHA:
             st.session_state.update({"logado": True, "perfil": "Sensei", "nome_usuario": "Sensei", "pin_usuario": "admin"})
             return True
-    
-    # Login Aluno (Por PIN)
     else:
         df_alunos['PIN'] = df_alunos['PIN'].astype(str).str.strip()
         credencial_limpa = str(credencial).strip()
@@ -135,9 +129,8 @@ elif not df_alunos.empty:
         media_freq = df_alunos['Frequência Num'].mean() if 'Frequência Num' in df_alunos.columns else 0
         col2.metric("Frequência Média do Dojo", f"{media_freq:.1f}%")
         
-        st.markdown("<br>", unsafe_allow_html=True) # Espaçamento
+        st.markdown("<br>", unsafe_allow_html=True)
         
-        # SISTEMA DE ABAS (TABS) PARA ACESSAR TODAS AS TABELAS
         aba1, aba2, aba3 = st.tabs(["📊 Visão Geral (Resumo)", "📅 Controle de Frequência (Datas)", "🥋 Relatório de Graduação"])
         
         with aba1:
@@ -148,12 +141,10 @@ elif not df_alunos.empty:
             
         with aba2:
             st.markdown("### Planilha Bruta de Frequência")
-            st.write("Acompanhamento diário de faltas e presenças.")
             st.dataframe(df_frequencia_bruta, use_container_width=True)
             
         with aba3:
             st.markdown("### Planilha Bruta de Graduação")
-            st.write("Dados completos sobre faixas e tempo de tatame.")
             if not df_graduacao_bruta.empty:
                 st.dataframe(df_graduacao_bruta, use_container_width=True)
             else:
@@ -163,6 +154,7 @@ elif not df_alunos.empty:
     elif st.session_state["perfil"] == "Aluno":
         st.subheader(f"Olá, {st.session_state['nome_usuario']}! Oss!")
         
+        # Puxa os dados cruzados para o cabeçalho
         aluno_info = df_alunos[df_alunos['PIN'] == st.session_state['pin_usuario']].iloc[0]
         
         st.markdown("### Seu Progresso")
@@ -184,22 +176,44 @@ elif not df_alunos.empty:
             
         st.divider()
         
-        # Extrai as datas de presença (ignorando colunas calculadas)
-        st.markdown("### Suas Últimas Aulas")
-        if 'Frequência %' in df_alunos.columns:
-            idx_freq = df_alunos.columns.get_loc('Frequência %')
-            colunas_datas = df_alunos.columns[idx_freq+1:-1] 
+        # --- TABELA DE HISTÓRICO DE AULAS ---
+        st.markdown("### 📅 Seu Histórico Diário de Presença")
+        st.write("Acompanhe aqui o registro completo de todas as suas aulas.")
+        
+        # Puxa a linha específica do aluno na planilha bruta de frequência para evitar bugs de colunas
+        aluno_freq_bruta = df_frequencia_bruta[df_frequencia_bruta['PIN'] == st.session_state['pin_usuario']].iloc[0]
+        
+        if 'Frequência %' in df_frequencia_bruta.columns:
+            idx_freq = df_frequencia_bruta.columns.get_loc('Frequência %')
+            # Extrai apenas as colunas de datas que vêm depois da Frequência
+            colunas_datas = [col for col in df_frequencia_bruta.columns[idx_freq+1:] if col != 'Frequência Num']
             
             if len(colunas_datas) > 0:
-                datas_recentes = colunas_datas[-5:]
-                cols_presenca = st.columns(len(datas_recentes))
+                historico_lista = []
                 
-                for i, data in enumerate(datas_recentes):
-                    status_aula = aluno_info.get(data, "-")
-                    with cols_presenca[i]:
-                        if str(status_aula).strip().upper() == 'P':
-                            st.success(f"**{data}**\n\n✅ Presente")
-                        elif str(status_aula).strip().upper() == 'F':
-                            st.error(f"**{data}**\n\n❌ Falta")
-                        else:
-                            st.info(f"**{data}**\n\n{status_aula}")
+                for data in colunas_datas:
+                    status_aula = str(aluno_freq_bruta.get(data, "-")).strip().upper()
+                    
+                    if status_aula == 'P':
+                        status_formatado = "✅ Presente"
+                    elif status_aula == 'F':
+                        status_formatado = "❌ Falta"
+                    elif status_aula == 'C':
+                        status_formatado = "🔵 Cancelado / Feriado"
+                    elif status_aula == 'NAN' or status_aula == '-':
+                        status_formatado = "⏳ Aguardando registro"
+                    else:
+                        status_formatado = status_aula
+                        
+                    historico_lista.append({"Data da Aula": data, "Status": status_formatado})
+                
+                # Converte para DataFrame
+                df_historico_aluno = pd.DataFrame(historico_lista)
+                
+                # Inverte a ordem para mostrar as aulas mais recentes no topo
+                df_historico_aluno = df_historico_aluno[::-1]
+                
+                # Exibe como uma tabela limpa e sem o índice numérico
+                st.dataframe(df_historico_aluno, use_container_width=True, hide_index=True)
+            else:
+                st.info("Nenhuma data de aula encontrada na planilha.")
