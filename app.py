@@ -124,8 +124,55 @@ elif not df_alunos.empty:
         
         col1, col2 = st.columns(2)
         col1.metric("Total de Alunos Matriculados", len(df_alunos))
-        media_freq = df_alunos['Frequência Num'].mean() if 'Frequência Num' in df_alunos.columns else 0
-        col2.metric("Frequência Média do Dojo", f"{media_freq:.1f}%")
+        
+        # --- CÁLCULO DE FREQUÊNCIA MÉDIA REAL (ALUNOS ATIVOS) ---
+        media_freq_real = 0.0
+        qtd_ativos = 0
+        
+        if 'Frequência %' in df_frequencia_bruta.columns:
+            idx_freq = df_frequencia_bruta.columns.get_loc('Frequência %')
+            colunas_datas = [col for col in df_frequencia_bruta.columns[idx_freq+1:] if col != 'Frequência Num']
+            
+            alunos_ativos_pins = []
+            
+            for index, row in df_frequencia_bruta.iterrows():
+                # Extrai apenas presenças e faltas daquele aluno (ignora vazios)
+                status_list = [str(row.get(col, '')).strip().upper() for col in colunas_datas]
+                status_list = [s for s in status_list if s in ['P', 'F', 'C']]
+                
+                # Regra 1: Teve 2 presenças seguidas em algum momento?
+                teve_duas_presencas = False
+                for i in range(len(status_list) - 1):
+                    if status_list[i] == 'P' and status_list[i+1] == 'P':
+                        teve_duas_presencas = True
+                        break
+                        
+                # Regra 2: O aluno começou a faltar por mais de 3 dias seguidos? (4 faltas)
+                # Verifica se os últimos 4 registros dele são faltas
+                esta_inativo = False
+                if len(status_list) >= 4:
+                    if status_list[-1] == 'F' and status_list[-2] == 'F' and status_list[-3] == 'F' and status_list[-4] == 'F':
+                        esta_inativo = True
+                        
+                # Se for engajado, adiciona ao cálculo
+                if teve_duas_presencas and not esta_inativo:
+                    alunos_ativos_pins.append(str(row['PIN']).strip())
+            
+            # Filtra a base apenas com os ativos e calcula a nova média
+            df_alunos['PIN'] = df_alunos['PIN'].astype(str).str.strip()
+            df_ativos = df_alunos[df_alunos['PIN'].isin(alunos_ativos_pins)]
+            
+            if not df_ativos.empty:
+                media_freq_real = df_ativos['Frequência Num'].mean()
+                qtd_ativos = len(df_ativos)
+
+        # Exibe a nova métrica na tela do Sensei (com um aviso explicativo se passar o mouse por cima)
+        col2.metric(
+            "Frequência Média (Ativos)", 
+            f"{media_freq_real:.1f}%", 
+            f"Calculado com base em {qtd_ativos} alunos", 
+            help="A média desconsidera alunos que nunca vieram 2 dias seguidos ou que estão com 4 ou mais faltas consecutivas no momento."
+        )
         
         st.markdown("<br>", unsafe_allow_html=True)
         
@@ -189,7 +236,6 @@ elif not df_alunos.empty:
                 for data in colunas_datas:
                     status_aula = str(aluno_freq_bruta.get(data, "-")).strip().upper()
                     
-                    # Filtro inteligente: Pula colunas vazias, com traço ou nulas do futuro
                     if status_aula in ['NAN', '-', '']:
                         continue
                         
@@ -204,7 +250,6 @@ elif not df_alunos.empty:
                         
                     historico_lista.append({"Data da Aula": data, "Status": status_formatado})
                 
-                # Exibe a tabela apenas se houver aulas registradas no passado
                 if len(historico_lista) > 0:
                     df_historico_aluno = pd.DataFrame(historico_lista)
                     st.dataframe(df_historico_aluno, use_container_width=True, hide_index=True)
