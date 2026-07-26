@@ -140,15 +140,10 @@ elif not df_alunos.empty:
                 status_list = [str(row.get(col, '')).strip().upper() for col in colunas_datas]
                 status_list = [s for s in status_list if s in ['P', 'F', 'C']]
                 
-                # Regra 1: Teve 2 presenças seguidas em algum momento?
-                teve_duas_presencas = False
-                for i in range(len(status_list) - 1):
-                    if status_list[i] == 'P' and status_list[i+1] == 'P':
-                        teve_duas_presencas = True
-                        break
+                # Regra 1: Tem pelo menos 2 presenças no total histórico? (Isso engloba quem vai 1x na semana)
+                teve_duas_presencas = status_list.count('P') >= 2
                         
-                # Regra 2: O aluno começou a faltar por mais de 3 dias seguidos? (4 faltas)
-                # Verifica se os últimos 4 registros dele são faltas
+                # Regra 2: O aluno está com 4 faltas seguidas ativas no momento?
                 esta_inativo = False
                 if len(status_list) >= 4:
                     if status_list[-1] == 'F' and status_list[-2] == 'F' and status_list[-3] == 'F' and status_list[-4] == 'F':
@@ -166,12 +161,11 @@ elif not df_alunos.empty:
                 media_freq_real = df_ativos['Frequência Num'].mean()
                 qtd_ativos = len(df_ativos)
 
-        # Exibe a nova métrica na tela do Sensei (com um aviso explicativo se passar o mouse por cima)
         col2.metric(
             "Frequência Média (Ativos)", 
             f"{media_freq_real:.1f}%", 
             f"Calculado com base em {qtd_ativos} alunos", 
-            help="A média desconsidera alunos que nunca vieram 2 dias seguidos ou que estão com 4 ou mais faltas consecutivas no momento."
+            help="A média reflete o tatame real: desconsidera alunos com menos de 2 presenças na história ou que estejam com 4 ou mais faltas consecutivas no momento."
         )
         
         st.markdown("<br>", unsafe_allow_html=True)
