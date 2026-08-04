@@ -17,6 +17,9 @@ SENSEI_SENHA = "admin"
 URL_FREQUENCIA = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ6gHkJJz3jWTzh_uYGJe38a8tCUYJBDGF0riZ4zVs28liCx1l13u1Yd5zwFh-M6lw5dbX1Xd_RUqJk/pub?gid=2126799096&single=true&output=csv"
 URL_GRADUACAO = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ6gHkJJz3jWTzh_uYGJe38a8tCUYJBDGF0riZ4zVs28liCx1l13u1Yd5zwFh-M6lw5dbX1Xd_RUqJk/pub?gid=659980360&single=true&output=csv"
 
+# LINK DA BIBLIOTECA DO DOJO
+URL_BIBLIOTECA = "https://drive.google.com/drive/folders/17EdPYgeTXdXSJCzJhO2Ge9oMdGi8VlU1?usp=drive_link"
+
 # ==========================================
 # 2. Processamento de Dados (Pandas)
 # ==========================================
@@ -103,6 +106,13 @@ if not st.session_state["logado"]:
                 st.sidebar.error("Credenciais inválidas. Verifique seu PIN.")
 else:
     st.sidebar.success(f"Bem-vindo(a), {st.session_state['nome_usuario']}")
+    
+    # --- NOVO: LINK DA BIBLIOTECA NA BARRA LATERAL ---
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("📚 **Material de Estudo**")
+    st.sidebar.markdown(f"[Acessar Biblioteca do Dojo]({URL_BIBLIOTECA})")
+    st.sidebar.markdown("---")
+    
     if st.sidebar.button("Sair do Portal"):
         st.session_state.update({"logado": False, "perfil": None, "nome_usuario": None, "pin_usuario": None})
         st.rerun()
@@ -136,24 +146,19 @@ elif not df_alunos.empty:
             alunos_ativos_pins = []
             
             for index, row in df_frequencia_bruta.iterrows():
-                # Extrai apenas presenças e faltas daquele aluno (ignora vazios)
                 status_list = [str(row.get(col, '')).strip().upper() for col in colunas_datas]
                 status_list = [s for s in status_list if s in ['P', 'F', 'C']]
                 
-                # Regra 1: Tem pelo menos 2 presenças no total histórico? (Isso engloba quem vai 1x na semana)
                 teve_duas_presencas = status_list.count('P') >= 2
                         
-                # Regra 2: O aluno está com 4 faltas seguidas ativas no momento?
                 esta_inativo = False
                 if len(status_list) >= 4:
                     if status_list[-1] == 'F' and status_list[-2] == 'F' and status_list[-3] == 'F' and status_list[-4] == 'F':
                         esta_inativo = True
                         
-                # Se for engajado, adiciona ao cálculo
                 if teve_duas_presencas and not esta_inativo:
                     alunos_ativos_pins.append(str(row['PIN']).strip())
             
-            # Filtra a base apenas com os ativos e calcula a nova média
             df_alunos['PIN'] = df_alunos['PIN'].astype(str).str.strip()
             df_ativos = df_alunos[df_alunos['PIN'].isin(alunos_ativos_pins)]
             
@@ -251,3 +256,9 @@ elif not df_alunos.empty:
                     st.info("Nenhuma aula foi computada para você até o momento.")
             else:
                 st.info("Nenhuma coluna de datas encontrada na planilha.")
+        
+        # --- NOVO: SEÇÃO DE BIBLIOTECA NO FINAL DA PÁGINA ---
+        st.divider()
+        st.markdown("### 📚 Biblioteca do Dojo")
+        st.write("Aprofunde seus conhecimentos! Acesse livros, manuais e materiais exclusivos para complementar seus treinos no tatame.")
+        st.link_button("Ir para a Biblioteca (Google Drive)", URL_BIBLIOTECA)
