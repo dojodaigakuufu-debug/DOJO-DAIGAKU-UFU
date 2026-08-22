@@ -107,7 +107,6 @@ if not st.session_state["logado"]:
 else:
     st.sidebar.success(f"Bem-vindo(a), {st.session_state['nome_usuario']}")
     
-    # --- LINK DA BIBLIOTECA NA BARRA LATERAL ---
     st.sidebar.markdown("---")
     st.sidebar.markdown("📚 **Material de Estudo**")
     st.sidebar.markdown(f"[Acessar Biblioteca do Dojo]({URL_BIBLIOTECA})")
@@ -135,7 +134,6 @@ elif not df_alunos.empty:
         col1, col2 = st.columns(2)
         col1.metric("Total de Alunos Matriculados", len(df_alunos))
         
-        # --- CÁLCULO DE FREQUÊNCIA MÉDIA REAL (ALUNOS ATIVOS) ---
         media_freq_real = 0.0
         qtd_ativos = 0
         
@@ -146,19 +144,17 @@ elif not df_alunos.empty:
             alunos_ativos_pins = []
             
             for index, row in df_frequencia_bruta.iterrows():
+                # INCLUÍDA A LETRA 'A' NO FILTRO
                 status_list = [str(row.get(col, '')).strip().upper() for col in colunas_datas]
-                status_list = [s for s in status_list if s in ['P', 'F', 'C']]
+                status_list = [s for s in status_list if s in ['P', 'F', 'C', 'A']]
                 
-                # Regra 1: Tem pelo menos 2 presenças no total histórico?
                 teve_duas_presencas = status_list.count('P') >= 2
                         
-                # Regra 2: O aluno está com 4 faltas seguidas ativas no momento?
                 esta_inativo = False
                 if len(status_list) >= 4:
                     if status_list[-1] == 'F' and status_list[-2] == 'F' and status_list[-3] == 'F' and status_list[-4] == 'F':
                         esta_inativo = True
                 
-                # Regra 3: Frequência total precisa ser igual ou maior que 20%
                 freq_num = 0.0
                 try:
                     freq_num = float(row.get('Frequência Num', 0))
@@ -166,11 +162,9 @@ elif not df_alunos.empty:
                     pass
                 frequencia_valida = freq_num >= 20.0
                         
-                # Se passar em todas as regras (engajado), adiciona ao cálculo
                 if teve_duas_presencas and not esta_inativo and frequencia_valida:
                     alunos_ativos_pins.append(str(row['PIN']).strip())
             
-            # Filtra a base apenas com os ativos e calcula a nova média
             df_alunos['PIN'] = df_alunos['PIN'].astype(str).str.strip()
             df_ativos = df_alunos[df_alunos['PIN'].isin(alunos_ativos_pins)]
             
@@ -231,7 +225,6 @@ elif not df_alunos.empty:
             
         st.divider()
         
-        # --- TABELA DE HISTÓRICO DE AULAS ---
         st.markdown("### 📅 Seu Histórico Diário de Presença")
         st.write("Acompanhe aqui o registro cronológico das suas aulas computadas.")
         
@@ -250,12 +243,15 @@ elif not df_alunos.empty:
                     if status_aula in ['NAN', '-', '']:
                         continue
                         
+                    # INCLUÍDA A LETRA 'A' NA FORMATAÇÃO VISUAL DO ALUNO
                     if status_aula == 'P':
                         status_formatado = "✅ Presente"
                     elif status_aula == 'F':
                         status_formatado = "❌ Falta"
                     elif status_aula == 'C':
                         status_formatado = "🔵 Cancelado / Feriado"
+                    elif status_aula == 'A':
+                        status_formatado = "📄 Atestado / Justificada"
                     else:
                         status_formatado = status_aula
                         
@@ -269,7 +265,6 @@ elif not df_alunos.empty:
             else:
                 st.info("Nenhuma coluna de datas encontrada na planilha.")
         
-        # --- SEÇÃO DE BIBLIOTECA NO FINAL DA PÁGINA ---
         st.divider()
         st.markdown("### 📚 Biblioteca do Dojo")
         st.write("Aprofunde seus conhecimentos! Acesse livros, manuais e materiais exclusivos para complementar seus treinos no tatame.")
