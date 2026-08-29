@@ -261,4 +261,9 @@ elif not df_alunos.empty:
                 else:
                     st.info("Nenhuma aula foi computada para você até o momento.")
             else:
-                st.info("Nenhuma
+                st.info("Nenhuma coluna de datas encontrada na planilha.")
+        
+        st.divider()
+        st.markdown("### 📚 Biblioteca do Dojo")
+        st.write("Aprofunde seus conhecimentos! Acesse livros, manuais e materiais exclusivos para complementar seus treinos no tatame.")
+        st.link_button("Ir para a Biblioteca (Google Drive)", URL_BIBLIOTECA)
