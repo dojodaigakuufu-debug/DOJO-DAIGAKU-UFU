@@ -13,7 +13,7 @@ st.set_page_config(
 SENSEI_EMAIL = "dojodaigakuufu@gmail.com"
 SENSEI_SENHA = "admin"
 
-# COLE OS SEUS LINKS DO GOOGLE SHEETS AQUI NOVAMENTE
+# LINKS CONECTADOS AO GOOGLE SHEETS
 URL_FREQUENCIA = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ6gHkJJz3jWTzh_uYGJe38a8tCUYJBDGF0riZ4zVs28liCx1l13u1Yd5zwFh-M6lw5dbX1Xd_RUqJk/pub?gid=2126799096&single=true&output=csv"
 URL_GRADUACAO = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ6gHkJJz3jWTzh_uYGJe38a8tCUYJBDGF0riZ4zVs28liCx1l13u1Yd5zwFh-M6lw5dbX1Xd_RUqJk/pub?gid=659980360&single=true&output=csv"
 
@@ -144,7 +144,6 @@ elif not df_alunos.empty:
             alunos_ativos_pins = []
             
             for index, row in df_frequencia_bruta.iterrows():
-                # INCLUÍDA A LETRA 'A' NO FILTRO
                 status_list = [str(row.get(col, '')).strip().upper() for col in colunas_datas]
                 status_list = [s for s in status_list if s in ['P', 'F', 'C', 'A']]
                 
@@ -243,7 +242,6 @@ elif not df_alunos.empty:
                     if status_aula in ['NAN', '-', '']:
                         continue
                         
-                    # INCLUÍDA A LETRA 'A' NA FORMATAÇÃO VISUAL DO ALUNO
                     if status_aula == 'P':
                         status_formatado = "✅ Presente"
                     elif status_aula == 'F':
@@ -263,9 +261,4 @@ elif not df_alunos.empty:
                 else:
                     st.info("Nenhuma aula foi computada para você até o momento.")
             else:
-                st.info("Nenhuma coluna de datas encontrada na planilha.")
-        
-        st.divider()
-        st.markdown("### 📚 Biblioteca do Dojo")
-        st.write("Aprofunde seus conhecimentos! Acesse livros, manuais e materiais exclusivos para complementar seus treinos no tatame.")
-        st.link_button("Ir para a Biblioteca (Google Drive)", URL_BIBLIOTECA)
+                st.info("Nenhuma
