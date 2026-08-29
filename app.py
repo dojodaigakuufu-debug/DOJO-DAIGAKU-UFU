@@ -14,8 +14,8 @@ SENSEI_EMAIL = "dojodaigakuufu@gmail.com"
 SENSEI_SENHA = "admin"
 
 # LINKS CONECTADOS AO GOOGLE SHEETS
-URL_FREQUENCIA = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ6gHkJJz3jWTzh_uYGJe38a8tCUYJBDGF0riZ4zVs28liCx1l13u1Yd5zwFh-M6lw5dbX1Xd_RUqJk/pub?gid=2126799096&single=true&output=csv"
-URL_GRADUACAO = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ6gHkJJz3jWTzh_uYGJe38a8tCUYJBDGF0riZ4zVs28liCx1l13u1Yd5zwFh-M6lw5dbX1Xd_RUqJk/pub?gid=659980360&single=true&output=csv"
+URL_FREQUENCIA = "COLE_AQUI_O_LINK_CSV_DA_ABA_FREQUENCIA"
+URL_GRADUACAO = "COLE_AQUI_O_LINK_CSV_DA_ABA_GRADUACAO"
 
 # LINK DA BIBLIOTECA DO DOJO
 URL_BIBLIOTECA = "https://drive.google.com/drive/folders/17EdPYgeTXdXSJCzJhO2Ge9oMdGi8VlU1?usp=drive_link"
@@ -30,14 +30,15 @@ def carregar_dados():
         df_freq.columns = df_freq.columns.str.strip()
         df_freq = df_freq.dropna(subset=['Nome do Aluno', 'PIN'], how='all')
         
+        # Conversão 100% segura e à prova de bugs (mesmo com células vazias ou números puros)
         if 'Frequência %' in df_freq.columns:
-            df_freq['Frequência Num'] = (
+            freq_limpa = (
                 df_freq['Frequência %']
                 .astype(str)
-                .str.replace('%', '')
-                .str.replace(',', '.')
-                .apply(lambda x: float(x) if x.replace('.', '', 1).isdigit() else 0.0)
+                .str.replace('%', '', regex=False)
+                .str.replace(',', '.', regex=False)
             )
+            df_freq['Frequência Num'] = pd.to_numeric(freq_limpa, errors='coerce').fillna(0.0)
 
         df_grad = pd.DataFrame()
         if URL_GRADUACAO.startswith("http"):
